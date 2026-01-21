@@ -21,7 +21,8 @@ export default defineConfig({
     permissions: [
       'sidePanel',
       'declarativeNetRequest',
-      'clipboardWrite',  // クリップボード書き込み権限
+      'clipboardWrite',
+      'storage',  // 設定保存用
     ],
     host_permissions: [
       'https://gemini.google.com/*',
@@ -37,6 +38,15 @@ export default defineConfig({
           path: 'rules.json',
         },
       ],
+    },
+    commands: {
+      _execute_action: {
+        suggested_key: {
+          default: 'Alt+G',
+          mac: 'Alt+G',
+        },
+        description: 'サイドパネルを開く',
+      },
     },
   },
 });

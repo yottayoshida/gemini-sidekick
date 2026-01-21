@@ -1,15 +1,20 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { loadSettings, resolveUrl, URLS, type GeminiSettings } from '../lib/settings';
 
-  const GEMINI_URL = 'https://gemini.google.com/app';
-
+  let geminiUrl = URLS.gemini;  // デフォルト
   let selectedText = '';
   let showNotification = false;
-  let autoCopyEnabled = true;  // 自動コピーON/OFF
+  let autoCopyEnabled = true;  // 設定から読み込む
 
-  onMount(() => {
-    // サイドパネルが開いたことをBackgroundに通知
-    notifyPanelState(true);
+  onMount(async () => {
+    // 設定を読み込んでURLと自動コピー設定を適用
+    const settings = await loadSettings();
+    geminiUrl = resolveUrl(settings);
+    autoCopyEnabled = settings.autoCopyEnabled;
+
+    // サイドパネルが開いたことをBackgroundに通知（自動コピー設定を考慮）
+    notifyAutoCopyState(autoCopyEnabled);
 
     // Content Scriptからの選択テキスト（コピー済み）を受信
     chrome.runtime.onMessage.addListener((message) => {
@@ -24,6 +29,20 @@
       }
     });
 
+    // 設定変更を監視して即時反映
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.settings) {
+        const newSettings: GeminiSettings = changes.settings.newValue;
+        geminiUrl = resolveUrl(newSettings);
+
+        // 自動コピー設定が変更された場合
+        if (autoCopyEnabled !== newSettings.autoCopyEnabled) {
+          autoCopyEnabled = newSettings.autoCopyEnabled;
+          notifyAutoCopyState(autoCopyEnabled);
+        }
+      }
+    });
+
     // ページを離れる前に閉じた通知を送る
     window.addEventListener('beforeunload', handleClose);
   });
@@ -33,22 +52,19 @@
   });
 
   function handleClose() {
-    notifyPanelState(false);
+    notifyAutoCopyState(false);
   }
 
-  // Backgroundにサイドパネルの状態を通知
-  function notifyPanelState(opened: boolean) {
+  // Backgroundに自動コピーの状態を通知
+  function notifyAutoCopyState(enabled: boolean) {
     chrome.runtime.sendMessage({
-      type: opened ? 'SIDEPANEL_OPENED' : 'SIDEPANEL_CLOSED'
+      type: enabled ? 'SIDEPANEL_OPENED' : 'SIDEPANEL_CLOSED'
     }).catch(() => {});
   }
 
-  // 自動コピーのON/OFF切り替え
-  function toggleAutoCopy() {
-    autoCopyEnabled = !autoCopyEnabled;
-    chrome.runtime.sendMessage({
-      type: autoCopyEnabled ? 'SIDEPANEL_OPENED' : 'SIDEPANEL_CLOSED'
-    }).catch(() => {});
+  // 設定画面を開く
+  function openSettings() {
+    chrome.runtime.openOptionsPage();
   }
 
   // 選択テキストをクリア
@@ -60,12 +76,11 @@
 <div class="container">
   <div class="toolbar">
     <button
-      class="toggle-btn"
-      class:enabled={autoCopyEnabled}
-      on:click={toggleAutoCopy}
-      title={autoCopyEnabled ? '自動コピーON' : '自動コピーOFF'}
+      class="settings-btn"
+      on:click={openSettings}
+      title="設定を開く"
     >
-      {autoCopyEnabled ? '📋 自動コピーON' : '📋 自動コピーOFF'}
+      ⚙️ 設定
     </button>
   </div>
 
@@ -73,7 +88,7 @@
     <div class="notification">
       ✅ コピー完了！Geminiに貼り付けてね
     </div>
-  {:else if selectedText}
+  {:else if selectedText && autoCopyEnabled}
     <div class="selection-bar">
       <div class="selection-text">
         📋 {selectedText.length > 80 ? selectedText.substring(0, 80) + '...' : selectedText}
@@ -83,7 +98,7 @@
   {/if}
 
   <iframe
-    src={GEMINI_URL}
+    src={geminiUrl}
     title="Gemini"
     allow="clipboard-write; clipboard-read"
   ></iframe>
@@ -118,24 +133,19 @@
     border-bottom: 1px solid #e0e0e0;
   }
 
-  .toggle-btn {
-    background: #e0e0e0;
+  .settings-btn {
+    background: #e8e8e8;
     border: none;
     border-radius: 16px;
     padding: 4px 12px;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    color: #666;
+    color: #555;
   }
 
-  .toggle-btn.enabled {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-  }
-
-  .toggle-btn:hover {
-    opacity: 0.9;
+  .settings-btn:hover {
+    background: #ddd;
   }
 
   .notification {
