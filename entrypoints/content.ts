@@ -1,23 +1,23 @@
 // Content Script - テキスト選択時に自動コピー
 // セキュリティ: パスワードフィールドは除外
+// 設定は chrome.storage から直接読み込む（Background経由しない）
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_end',
   main() {
-    // サイドパネルが開いているかどうかのフラグ
-    let isEnabled = false;
+    document.addEventListener('mouseup', async (event) => {
+      // 設定を直接確認（storageから毎回読み込む）
+      const [sessionResult, syncResult] = await Promise.all([
+        chrome.storage.session.get('sidePanelOpen'),
+        chrome.storage.sync.get('settings'),
+      ]);
 
-    // Background Scriptから有効/無効の通知を受け取る
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message.type === 'TOGGLE_COPY') {
-        isEnabled = message.enabled;
-      }
-    });
+      const sidePanelOpen = sessionResult.sidePanelOpen || false;
+      const settings = syncResult.settings || { autoCopyEnabled: true };
 
-    document.addEventListener('mouseup', (event) => {
-      // 機能が無効なら何もしない
-      if (!isEnabled) return;
+      // サイドパネルが開いていない、または自動コピーOFFなら何もしない
+      if (!sidePanelOpen || !settings.autoCopyEnabled) return;
 
       // パスワードフィールドからの選択は除外
       const target = event.target as HTMLElement;
@@ -48,7 +48,7 @@ export default defineContentScript({
 
       // クリップボードにコピー
       navigator.clipboard.writeText(text).then(() => {
-        // サイドパネルに通知（ログ出力なし）
+        // サイドパネルに通知
         chrome.runtime.sendMessage({
           type: 'SELECTION',
           text: text,

@@ -69,7 +69,7 @@
   }
 
   function openGemini() {
-    chrome.tabs.create({ url: 'https://gemini.google.com/gems' });
+    chrome.tabs.create({ url: 'https://gemini.google.com/gems/view' });
   }
 
   $: hasChanges = JSON.stringify(settings) !== JSON.stringify(originalSettings);
