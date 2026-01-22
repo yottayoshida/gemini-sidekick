@@ -34,12 +34,9 @@
       if (changes.settings) {
         const newSettings: GeminiSettings = changes.settings.newValue;
         geminiUrl = resolveUrl(newSettings);
-
-        // 自動コピー設定が変更された場合
-        if (autoCopyEnabled !== newSettings.autoCopyEnabled) {
-          autoCopyEnabled = newSettings.autoCopyEnabled;
-          notifyAutoCopyState(autoCopyEnabled);
-        }
+        autoCopyEnabled = newSettings.autoCopyEnabled;
+        // 設定変更時は常に状態を通知（Service Workerスリープ対策）
+        notifyAutoCopyState(autoCopyEnabled);
       }
     });
 
