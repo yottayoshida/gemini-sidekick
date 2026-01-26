@@ -1,18 +1,22 @@
 // 設定管理ユーティリティ
 // Chrome Storage APIを使用して設定を保存・読み込み
 
+import type { LanguageSetting } from './i18n';
+
 export type DefaultView = 'gemini' | 'gems' | 'custom';
 
 export interface GeminiSettings {
   defaultView: DefaultView;
   customGemUrl: string;
   autoCopyEnabled: boolean;
+  language: LanguageSetting;
 }
 
 export const DEFAULT_SETTINGS: GeminiSettings = {
   defaultView: 'gemini',
   customGemUrl: '',
   autoCopyEnabled: true,
+  language: 'auto',
 };
 
 // URL定義
@@ -39,7 +43,9 @@ export function resolveUrl(settings: GeminiSettings): string {
 export async function loadSettings(): Promise<GeminiSettings> {
   try {
     const result = await chrome.storage.sync.get('settings');
-    return result.settings || DEFAULT_SETTINGS;
+    const stored = result.settings as GeminiSettings | undefined;
+    // 既存設定がある場合はデフォルトとマージ（新しいプロパティ対応）
+    return stored ? { ...DEFAULT_SETTINGS, ...stored } : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -50,10 +56,10 @@ export async function saveSettings(settings: GeminiSettings): Promise<void> {
   await chrome.storage.sync.set({ settings });
 }
 
-// URLバリデーション
-export function validateGemUrl(url: string): { valid: boolean; error?: string } {
+// URLバリデーション (returns error key for i18n)
+export function validateGemUrl(url: string): { valid: boolean; errorKey?: string } {
   if (!url.trim()) {
-    return { valid: false, error: 'URLを入力してください' };
+    return { valid: false, errorKey: 'errorUrlRequired' };
   }
 
   try {
@@ -63,31 +69,50 @@ export function validateGemUrl(url: string): { valid: boolean; error?: string } 
     if (parsed.hostname !== 'gemini.google.com') {
       return {
         valid: false,
-        error: 'gemini.google.com のURLを入力してください'
+        errorKey: 'errorUrlInvalidDomain'
       };
     }
 
     return { valid: true };
   } catch {
-    return { valid: false, error: '有効なURLを入力してください' };
+    return { valid: false, errorKey: 'errorUrlInvalid' };
   }
 }
 
-// デフォルト画面の選択肢
+// デフォルト画面の選択肢 (keys for i18n)
 export const VIEW_OPTIONS = [
   {
     value: 'gemini' as DefaultView,
-    label: '新しいチャット画面',
-    description: 'Geminiの通常画面'
+    labelKey: 'viewGemini',
+    descKey: 'viewGeminiDesc'
   },
   {
     value: 'gems' as DefaultView,
-    label: 'Gemsの一覧画面',
-    description: 'Gemの一覧を表示'
+    labelKey: 'viewGems',
+    descKey: 'viewGemsDesc'
   },
   {
     value: 'custom' as DefaultView,
-    label: '指定したGem（URLを入力）',
-    description: '特定のGemを直接開く'
+    labelKey: 'viewCustom',
+    descKey: 'viewCustomDesc'
+  },
+] as const;
+
+// 言語設定の選択肢 (keys for i18n)
+export const LANGUAGE_OPTIONS = [
+  {
+    value: 'auto' as LanguageSetting,
+    labelKey: 'languageAuto',
+    descKey: 'languageAutoDesc'
+  },
+  {
+    value: 'ja' as LanguageSetting,
+    labelKey: 'languageJapanese',
+    descKey: ''
+  },
+  {
+    value: 'en' as LanguageSetting,
+    labelKey: 'languageEnglish',
+    descKey: ''
   },
 ] as const;

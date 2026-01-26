@@ -4,8 +4,9 @@ export default defineConfig({
   outDir: '../../chrome-ext-gemini-sidekick',
   modules: ['@wxt-dev/module-svelte'],
   manifest: {
-    name: 'Gemini Sidekick',
-    description: 'サイドパネルでGeminiを使う',
+    default_locale: 'en',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
     icons: {
       16: 'icons/icon16.png',
       48: 'icons/icon48.png',
@@ -45,7 +46,7 @@ export default defineConfig({
           default: 'Alt+G',
           mac: 'Alt+G',
         },
-        description: 'サイドパネルを開く',
+        description: '__MSG_commandOpenSidePanel__',
       },
     },
   },

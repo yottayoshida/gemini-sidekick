@@ -2,6 +2,8 @@
 // セキュリティ: パスワードフィールドは除外
 // 設定は chrome.storage から直接読み込む（Background経由しない）
 
+import { DEFAULT_SETTINGS, type GeminiSettings } from './lib/settings';
+
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_end',
@@ -14,7 +16,8 @@ export default defineContentScript({
       ]);
 
       const sidePanelOpen = sessionResult.sidePanelOpen || false;
-      const settings = syncResult.settings || { autoCopyEnabled: true };
+      const storedSettings = syncResult.settings as GeminiSettings | undefined;
+      const settings = storedSettings ? { ...DEFAULT_SETTINGS, ...storedSettings } : DEFAULT_SETTINGS;
 
       // サイドパネルが開いていない、または自動コピーOFFなら何もしない
       if (!sidePanelOpen || !settings.autoCopyEnabled) return;

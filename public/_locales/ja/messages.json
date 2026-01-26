@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Gemini Sidekick",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "サイドパネルでGeminiを使う",
+    "description": "Extension description"
+  },
+  "commandOpenSidePanel": {
+    "message": "サイドパネルを開く",
+    "description": "Keyboard shortcut description"
+  }
+}

@@ -7,10 +7,19 @@
     validateGemUrl,
     URLS,
     VIEW_OPTIONS,
+    LANGUAGE_OPTIONS,
     type GeminiSettings,
     type DefaultView,
     DEFAULT_SETTINGS,
   } from '../lib/settings';
+  import {
+    t,
+    initLocale,
+    updateLocale,
+    getLocaleDisplayName,
+    resolveLocale,
+    type LanguageSetting,
+  } from '../lib/i18n';
 
   let geminiUrl = URLS.gemini;
   let selectedText = '';
@@ -22,7 +31,7 @@
 
   // 設定フォーム用
   let settings: GeminiSettings = { ...DEFAULT_SETTINGS };
-  let urlError = '';
+  let urlErrorKey = ''; // i18n key for error message
   let showSaveSuccess = false;
 
   onMount(async () => {
@@ -31,6 +40,9 @@
     settings = { ...loadedSettings };
     geminiUrl = resolveUrl(loadedSettings);
     autoCopyEnabled = loadedSettings.autoCopyEnabled;
+
+    // i18n初期化（設定の言語に合わせる）
+    initLocale(loadedSettings.language);
 
     // サイドパネルが開いたことをstorage.sessionに保存
     chrome.storage.session.set({ sidePanelOpen: true });
@@ -54,6 +66,8 @@
         const newSettings: GeminiSettings = changes.settings.newValue;
         geminiUrl = resolveUrl(newSettings);
         autoCopyEnabled = newSettings.autoCopyEnabled;
+        // 言語設定も即時反映
+        updateLocale(newSettings.language);
       }
     });
 
@@ -82,13 +96,16 @@
 
   // 設定を保存
   async function handleSave() {
-    if (settings.defaultView === 'custom' && urlError) {
+    if (settings.defaultView === 'custom' && urlErrorKey) {
       return;
     }
 
     await saveSettings(settings);
     geminiUrl = resolveUrl(settings);
     autoCopyEnabled = settings.autoCopyEnabled;
+
+    // 言語設定を即時反映
+    updateLocale(settings.language);
 
     showSaveSuccess = true;
     setTimeout(() => {
@@ -101,7 +118,7 @@
   function handleViewChange(value: DefaultView) {
     settings.defaultView = value;
     if (value !== 'custom') {
-      urlError = '';
+      urlErrorKey = '';
     } else {
       validateUrl();
     }
@@ -117,11 +134,16 @@
   // URLバリデーション
   function validateUrl() {
     if (settings.defaultView !== 'custom') {
-      urlError = '';
+      urlErrorKey = '';
       return;
     }
     const result = validateGemUrl(settings.customGemUrl);
-    urlError = result.error || '';
+    urlErrorKey = result.errorKey || '';
+  }
+
+  // 言語設定の変更
+  function handleLanguageChange(value: LanguageSetting) {
+    settings.language = value;
   }
 
   // 選択テキストをクリア
@@ -139,7 +161,7 @@
     chrome.tabs.create({ url: URLS.gems });
   }
 
-  $: canSave = settings.defaultView !== 'custom' || !urlError;
+  $: canSave = settings.defaultView !== 'custom' || !urlErrorKey;
 </script>
 
 <div class="container">
@@ -147,13 +169,13 @@
     <!-- 設定画面 -->
     <div class="settings-container">
       <div class="settings-header">
-        <button class="back-btn" on:click={closeSettings}>← 戻る</button>
-        <h1>設定</h1>
+        <button class="back-btn" on:click={closeSettings}>{$t('back')}</button>
+        <h1>{$t('settingsTitle')}</h1>
       </div>
 
       <div class="settings-content">
         <section class="section">
-          <h2>デフォルト画面</h2>
+          <h2>{$t('defaultView')}</h2>
           <div class="options">
             {#each VIEW_OPTIONS as option}
               <label class="option" class:selected={settings.defaultView === option.value}>
@@ -164,7 +186,7 @@
                   checked={settings.defaultView === option.value}
                   on:change={() => handleViewChange(option.value)}
                 />
-                <span class="option-label">{option.label}</span>
+                <span class="option-label">{$t(option.labelKey)}</span>
               </label>
 
               {#if option.value === 'custom' && settings.defaultView === 'custom'}
@@ -172,16 +194,16 @@
                   <input
                     type="url"
                     class="url-input"
-                    class:error={urlError}
-                    placeholder="https://gemini.google.com/gem/..."
+                    class:error={urlErrorKey}
+                    placeholder={$t('customUrlPlaceholder')}
                     value={settings.customGemUrl}
                     on:input={handleUrlInput}
                   />
-                  {#if urlError}
-                    <p class="error-message">⚠️ {urlError}</p>
+                  {#if urlErrorKey}
+                    <p class="error-message">⚠️ {$t(urlErrorKey)}</p>
                   {/if}
                   <button class="help-link" on:click={openGemini}>
-                    GeminiでURLを確認 →
+                    {$t('openGemini')}
                   </button>
                 </div>
               {/if}
@@ -190,17 +212,41 @@
         </section>
 
         <section class="section">
-          <h2>動作設定</h2>
+          <h2>{$t('behaviorSettings')}</h2>
           <label class="toggle-option">
             <input type="checkbox" bind:checked={settings.autoCopyEnabled} />
-            <span class="toggle-label">テキスト選択時に自動コピー</span>
+            <span class="toggle-label">{$t('autoCopyEnabled')}</span>
           </label>
         </section>
 
         <section class="section">
-          <h2>ショートカット</h2>
-          <p class="shortcut-text">サイドパネルを開く: <kbd>Alt</kbd>+<kbd>G</kbd></p>
-          <button class="link-btn" on:click={openShortcutSettings}>Chrome設定で変更 →</button>
+          <h2>{$t('languageSettings')}</h2>
+          <div class="options">
+            {#each LANGUAGE_OPTIONS as option}
+              <label class="option" class:selected={settings.language === option.value}>
+                <input
+                  type="radio"
+                  name="language"
+                  value={option.value}
+                  checked={settings.language === option.value}
+                  on:change={() => handleLanguageChange(option.value)}
+                />
+                <span class="option-label">
+                  {#if option.value === 'auto'}
+                    {$t('languageAutoCurrent', { lang: getLocaleDisplayName(resolveLocale('auto')) })}
+                  {:else}
+                    {$t(option.labelKey)}
+                  {/if}
+                </span>
+              </label>
+            {/each}
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>{$t('shortcutSettings')}</h2>
+          <p class="shortcut-text">{$t('shortcutOpenSidePanel')} <kbd>Alt</kbd>+<kbd>G</kbd></p>
+          <button class="link-btn" on:click={openShortcutSettings}>{$t('shortcutChangeInChrome')}</button>
         </section>
 
         <button
@@ -209,21 +255,21 @@
           disabled={!canSave}
           on:click={handleSave}
         >
-          {showSaveSuccess ? '✓ 保存しました' : '保存する'}
+          {showSaveSuccess ? $t('saved') : $t('save')}
         </button>
       </div>
     </div>
   {:else}
     <!-- メイン画面 -->
     <div class="toolbar">
-      <button class="settings-btn" on:click={openSettings} title="設定を開く">
-        ⚙️ 設定
+      <button class="settings-btn" on:click={openSettings} title={$t('settings')}>
+        {$t('openSettings')}
       </button>
     </div>
 
     {#if showNotification}
       <div class="notification">
-        ✅ コピー完了！Geminiに貼り付けてね
+        {$t('copySuccess')}
       </div>
     {:else if selectedText && autoCopyEnabled}
       <div class="selection-bar">

@@ -5,14 +5,23 @@
     type DefaultView,
     DEFAULT_SETTINGS,
     VIEW_OPTIONS,
+    LANGUAGE_OPTIONS,
     loadSettings,
     saveSettings,
     validateGemUrl,
   } from '../lib/settings';
+  import {
+    t,
+    initLocale,
+    updateLocale,
+    getLocaleDisplayName,
+    resolveLocale,
+    type LanguageSetting,
+  } from '../lib/i18n';
 
   let settings: GeminiSettings = { ...DEFAULT_SETTINGS };
   let originalSettings: GeminiSettings = { ...DEFAULT_SETTINGS };
-  let urlError = '';
+  let urlErrorKey = '';
   let showSaveSuccess = false;
   let isSaving = false;
 
@@ -20,12 +29,15 @@
     settings = await loadSettings();
     originalSettings = { ...settings };
     validateUrl();
+
+    // i18n初期化
+    initLocale(settings.language);
   });
 
   function handleViewChange(value: DefaultView) {
     settings.defaultView = value;
     if (value !== 'custom') {
-      urlError = '';
+      urlErrorKey = '';
     } else {
       validateUrl();
     }
@@ -39,15 +51,19 @@
 
   function validateUrl() {
     if (settings.defaultView !== 'custom') {
-      urlError = '';
+      urlErrorKey = '';
       return;
     }
     const result = validateGemUrl(settings.customGemUrl);
-    urlError = result.error || '';
+    urlErrorKey = result.errorKey || '';
+  }
+
+  function handleLanguageChange(value: LanguageSetting) {
+    settings.language = value;
   }
 
   async function handleSave() {
-    if (settings.defaultView === 'custom' && urlError) {
+    if (settings.defaultView === 'custom' && urlErrorKey) {
       return;
     }
 
@@ -55,6 +71,10 @@
     try {
       await saveSettings(settings);
       originalSettings = { ...settings };
+
+      // 言語設定を即時反映
+      updateLocale(settings.language);
+
       showSaveSuccess = true;
       setTimeout(() => {
         showSaveSuccess = false;
@@ -73,15 +93,15 @@
   }
 
   $: hasChanges = JSON.stringify(settings) !== JSON.stringify(originalSettings);
-  $: canSave = hasChanges && (settings.defaultView !== 'custom' || !urlError);
+  $: canSave = hasChanges && (settings.defaultView !== 'custom' || !urlErrorKey);
 </script>
 
 <div class="container">
-  <h1>Gemini Sidekick 設定</h1>
+  <h1>{$t('optionsTitle')}</h1>
 
   <section class="section">
-    <h2>デフォルト画面</h2>
-    <p class="description">サイドパネルを開いたときに表示する画面</p>
+    <h2>{$t('defaultView')}</h2>
+    <p class="description">{$t('defaultViewDesc')}</p>
 
     <div class="options">
       {#each VIEW_OPTIONS as option}
@@ -95,12 +115,12 @@
           />
           <div class="option-content">
             <span class="option-label">
-              {option.label}
+              {$t(option.labelKey)}
               {#if originalSettings.defaultView === option.value}
-                <span class="current-badge">現在の設定</span>
+                <span class="current-badge">{$t('currentSetting')}</span>
               {/if}
             </span>
-            <span class="option-desc">{option.description}</span>
+            <span class="option-desc">{$t(option.descKey)}</span>
           </div>
         </label>
 
@@ -109,17 +129,17 @@
             <input
               type="url"
               class="url-input"
-              class:error={urlError}
-              placeholder="https://gemini.google.com/gem/..."
+              class:error={urlErrorKey}
+              placeholder={$t('customUrlPlaceholder')}
               value={settings.customGemUrl}
               on:input={handleUrlInput}
               disabled={settings.defaultView !== 'custom'}
             />
-            {#if urlError && settings.defaultView === 'custom'}
-              <p class="error-message">⚠️ {urlError}</p>
+            {#if urlErrorKey && settings.defaultView === 'custom'}
+              <p class="error-message">⚠️ {$t(urlErrorKey)}</p>
             {/if}
             <button class="help-link" on:click={openGemini} type="button">
-              GeminiでURLを確認 →
+              {$t('openGemini')}
             </button>
           </div>
         {/if}
@@ -128,27 +148,59 @@
   </section>
 
   <section class="section">
-    <h2>動作設定</h2>
+    <h2>{$t('behaviorSettings')}</h2>
     <label class="toggle-option">
       <input
         type="checkbox"
         bind:checked={settings.autoCopyEnabled}
       />
       <div class="toggle-content">
-        <span class="toggle-label">テキスト選択時に自動コピー</span>
-        <span class="toggle-desc">ページ上でテキストを選択すると自動でクリップボードにコピーします</span>
+        <span class="toggle-label">{$t('autoCopyEnabled')}</span>
+        <span class="toggle-desc">{$t('autoCopyDesc')}</span>
       </div>
     </label>
   </section>
 
   <section class="section">
-    <h2>ショートカット</h2>
+    <h2>{$t('languageSettings')}</h2>
+    <div class="options">
+      {#each LANGUAGE_OPTIONS as option}
+        <label class="option" class:selected={settings.language === option.value}>
+          <input
+            type="radio"
+            name="language"
+            value={option.value}
+            checked={settings.language === option.value}
+            on:change={() => handleLanguageChange(option.value)}
+          />
+          <div class="option-content">
+            <span class="option-label">
+              {#if option.value === 'auto'}
+                {$t('languageAutoCurrent', { lang: getLocaleDisplayName(resolveLocale('auto')) })}
+              {:else}
+                {$t(option.labelKey)}
+              {/if}
+              {#if originalSettings.language === option.value}
+                <span class="current-badge">{$t('currentSetting')}</span>
+              {/if}
+            </span>
+            {#if option.descKey}
+              <span class="option-desc">{$t(option.descKey)}</span>
+            {/if}
+          </div>
+        </label>
+      {/each}
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>{$t('shortcutSettings')}</h2>
     <div class="shortcut-info">
-      <p>サイドパネルを開く: <kbd>Alt</kbd> + <kbd>G</kbd></p>
+      <p>{$t('shortcutOpenSidePanel')} <kbd>Alt</kbd> + <kbd>G</kbd></p>
       <button class="link-button" on:click={openShortcutSettings} type="button">
-        Chrome設定で変更 →
+        {$t('shortcutChangeInChrome')}
       </button>
-      <p class="note">※ 新しいタブで設定画面が開きます</p>
+      <p class="note">{$t('shortcutNote')}</p>
     </div>
   </section>
 
@@ -160,11 +212,11 @@
       on:click={handleSave}
     >
       {#if showSaveSuccess}
-        ✓ 保存しました
+        {$t('saved')}
       {:else if isSaving}
-        保存中...
+        {$t('saving')}
       {:else}
-        保存する
+        {$t('save')}
       {/if}
     </button>
   </div>
