@@ -34,6 +34,9 @@
   let urlErrorKey = ''; // i18n key for error message
   let showSaveSuccess = false;
 
+  // Background Scriptとのポート接続（サイドパネル生存監視用）
+  let port: chrome.runtime.Port | null = null;
+
   onMount(async () => {
     // 設定を読み込んでURLと自動コピー設定を適用
     const loadedSettings = await loadSettings();
@@ -44,8 +47,9 @@
     // i18n初期化（設定の言語に合わせる）
     initLocale(loadedSettings.language);
 
-    // サイドパネルが開いたことをstorage.sessionに保存
-    chrome.storage.session.set({ sidePanelOpen: true });
+    // Background ScriptにPort接続してサイドパネルが開いていることを通知
+    // Port切断時にBackground側で sidePanelOpen: false が設定される
+    port = chrome.runtime.connect({ name: 'sidepanel' });
 
     // Content Scriptからの選択テキスト（コピー済み）を受信
     chrome.runtime.onMessage.addListener((message) => {
@@ -70,18 +74,12 @@
         updateLocale(newSettings.language);
       }
     });
-
-    // ページを離れる前に閉じた通知を送る
-    window.addEventListener('beforeunload', handleClose);
   });
 
   onDestroy(() => {
-    handleClose();
+    // Port切断（念のため明示的に切断、通常はページ終了時に自動切断される）
+    port?.disconnect();
   });
-
-  function handleClose() {
-    chrome.storage.session.set({ sidePanelOpen: false });
-  }
 
   // 設定画面を開く
   function openSettings() {
