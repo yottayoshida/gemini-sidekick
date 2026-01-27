@@ -9,11 +9,23 @@ export default defineContentScript({
   runAt: 'document_end',
   main() {
     document.addEventListener('mouseup', async (event) => {
+      // 拡張機能のコンテキストが有効か確認
+      // リロード後の古いContent Scriptでは chrome.runtime.id が undefined
+      if (!chrome.runtime?.id) {
+        return;
+      }
+
       // 設定を直接確認（storageから毎回読み込む）
-      const [sessionResult, syncResult] = await Promise.all([
-        chrome.storage.session.get('sidePanelOpen'),
-        chrome.storage.sync.get('settings'),
-      ]);
+      let sessionResult, syncResult;
+      try {
+        [sessionResult, syncResult] = await Promise.all([
+          chrome.storage.session.get('sidePanelOpen'),
+          chrome.storage.sync.get('settings'),
+        ]);
+      } catch {
+        // Extension context invalidated - 拡張機能がリロードされた
+        return;
+      }
 
       const sidePanelOpen = sessionResult.sidePanelOpen || false;
       const storedSettings = syncResult.settings as GeminiSettings | undefined;
@@ -51,14 +63,25 @@ export default defineContentScript({
 
       // クリップボードにコピー
       navigator.clipboard.writeText(text).then(() => {
-        // サイドパネルに通知
-        chrome.runtime.sendMessage({
-          type: 'SELECTION',
-          text: text,
-          copied: true,
-        }).catch(() => {
-          // サイドパネルが開いていない場合は無視
-        });
+        // 拡張機能のコンテキストが有効か確認してから送信
+        // リロード後の古いContent Scriptでは chrome.runtime.id が undefined になる
+        if (!chrome.runtime?.id) {
+          return; // 拡張機能が無効化されたので何もしない
+        }
+
+        try {
+          // サイドパネルに通知
+          chrome.runtime.sendMessage({
+            type: 'SELECTION',
+            text: text,
+            copied: true,
+          }).catch(() => {
+            // サイドパネルが開いていない場合は無視
+          });
+        } catch {
+          // Extension context invalidated - 拡張機能がリロードされた
+          // 古いContent Scriptなので何もしない
+        }
       }).catch(() => {
         // コピー失敗時は無視
       });
