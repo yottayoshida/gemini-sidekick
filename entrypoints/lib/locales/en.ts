@@ -32,6 +32,12 @@ export const en = {
   errorUrlInvalidDomain: 'Please enter a gemini.google.com URL',
   errorUrlInvalid: 'Please enter a valid URL',
 
+  // === Settings: Display ===
+  displaySettings: 'Display',
+  zoomLevel: 'Zoom Level',
+  zoomLevelDesc: 'Adjust the display size of Gemini in the side panel',
+  zoomLevelValue: '{value}%',
+
   // === Settings: Behavior ===
   behaviorSettings: 'Behavior',
   autoCopyEnabled: 'Auto-copy on text selection',

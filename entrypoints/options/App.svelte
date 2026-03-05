@@ -6,6 +6,9 @@
     DEFAULT_SETTINGS,
     VIEW_OPTIONS,
     LANGUAGE_OPTIONS,
+    ZOOM_MIN,
+    ZOOM_MAX,
+    ZOOM_STEP,
     loadSettings,
     saveSettings,
     validateGemUrl,
@@ -145,6 +148,27 @@
         {/if}
       {/each}
     </div>
+  </section>
+
+  <section class="section">
+    <h2>{$t('displaySettings')}</h2>
+    <p class="description">{$t('zoomLevelDesc')}</p>
+    <label class="zoom-control">
+      <span class="zoom-label">{$t('zoomLevel')}</span>
+      <div class="zoom-slider-row">
+        <span class="zoom-bound">{ZOOM_MIN}%</span>
+        <input
+          type="range"
+          class="zoom-slider"
+          min={ZOOM_MIN}
+          max={ZOOM_MAX}
+          step={ZOOM_STEP}
+          bind:value={settings.zoomLevel}
+        />
+        <span class="zoom-bound">{ZOOM_MAX}%</span>
+      </div>
+      <div class="zoom-value-display">{settings.zoomLevel}%</div>
+    </label>
   </section>
 
   <section class="section">
@@ -484,5 +508,46 @@
   .toggle-desc {
     font-size: 12px;
     color: #666;
+  }
+
+  /* ズームコントロール */
+  .zoom-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: default;
+  }
+
+  .zoom-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .zoom-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .zoom-bound {
+    font-size: 12px;
+    color: #999;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  .zoom-slider {
+    flex: 1;
+    height: 6px;
+    accent-color: #667eea;
+    cursor: pointer;
+  }
+
+  .zoom-value-display {
+    font-size: 20px;
+    font-weight: 600;
+    color: #667eea;
+    text-align: center;
   }
 </style>

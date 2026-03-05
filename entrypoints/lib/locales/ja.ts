@@ -34,6 +34,12 @@ export const ja: Record<TranslationKeys, string> = {
   errorUrlInvalidDomain: 'gemini.google.com のURLを入力してください',
   errorUrlInvalid: '有効なURLを入力してください',
 
+  // === Settings: Display ===
+  displaySettings: '表示設定',
+  zoomLevel: 'ズームレベル',
+  zoomLevelDesc: 'サイドパネル内のGeminiの表示サイズを調整します',
+  zoomLevelValue: '{value}%',
+
   // === Settings: Behavior ===
   behaviorSettings: '動作設定',
   autoCopyEnabled: 'テキスト選択時に自動コピー',

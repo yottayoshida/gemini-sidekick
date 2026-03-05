@@ -10,6 +10,7 @@ export interface GeminiSettings {
   customGemUrl: string;
   autoCopyEnabled: boolean;
   language: LanguageSetting;
+  zoomLevel: number;
 }
 
 export const DEFAULT_SETTINGS: GeminiSettings = {
@@ -17,7 +18,13 @@ export const DEFAULT_SETTINGS: GeminiSettings = {
   customGemUrl: '',
   autoCopyEnabled: true,
   language: 'auto',
+  zoomLevel: 100,
 };
+
+// ズームレベルの範囲
+export const ZOOM_MIN = 50;
+export const ZOOM_MAX = 150;
+export const ZOOM_STEP = 10;
 
 // URL定義
 export const URLS = {

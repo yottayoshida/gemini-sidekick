@@ -8,6 +8,9 @@
     URLS,
     VIEW_OPTIONS,
     LANGUAGE_OPTIONS,
+    ZOOM_MIN,
+    ZOOM_MAX,
+    ZOOM_STEP,
     type GeminiSettings,
     type DefaultView,
     DEFAULT_SETTINGS,
@@ -25,6 +28,7 @@
   let selectedText = '';
   let showNotification = false;
   let autoCopyEnabled = true;
+  let zoomLevel = 100;
 
   // 設定画面表示フラグ
   let showSettings = false;
@@ -43,6 +47,7 @@
     settings = { ...loadedSettings };
     geminiUrl = resolveUrl(loadedSettings);
     autoCopyEnabled = loadedSettings.autoCopyEnabled;
+    zoomLevel = loadedSettings.zoomLevel;
 
     // i18n初期化（設定の言語に合わせる）
     initLocale(loadedSettings.language);
@@ -70,6 +75,7 @@
         const newSettings: GeminiSettings = changes.settings.newValue;
         geminiUrl = resolveUrl(newSettings);
         autoCopyEnabled = newSettings.autoCopyEnabled;
+        zoomLevel = newSettings.zoomLevel;
         // 言語設定も即時反映
         updateLocale(newSettings.language);
       }
@@ -101,6 +107,7 @@
     await saveSettings(settings);
     geminiUrl = resolveUrl(settings);
     autoCopyEnabled = settings.autoCopyEnabled;
+    zoomLevel = settings.zoomLevel;
 
     // 言語設定を即時反映
     updateLocale(settings.language);
@@ -210,6 +217,24 @@
         </section>
 
         <section class="section">
+          <h2>{$t('displaySettings')}</h2>
+          <label class="zoom-control">
+            <span class="zoom-label">{$t('zoomLevel')}</span>
+            <div class="zoom-slider-row">
+              <input
+                type="range"
+                class="zoom-slider"
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={ZOOM_STEP}
+                bind:value={settings.zoomLevel}
+              />
+              <span class="zoom-value">{settings.zoomLevel}%</span>
+            </div>
+          </label>
+        </section>
+
+        <section class="section">
           <h2>{$t('behaviorSettings')}</h2>
           <label class="toggle-option">
             <input type="checkbox" bind:checked={settings.autoCopyEnabled} />
@@ -282,6 +307,7 @@
       src={geminiUrl}
       title="Gemini"
       allow="clipboard-write; clipboard-read"
+      style="zoom: {zoomLevel / 100}"
     ></iframe>
   {/if}
 </div>
@@ -590,5 +616,39 @@
 
   .save-button.success {
     background: #4caf50;
+  }
+
+  /* ズームコントロール */
+  .zoom-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: default;
+  }
+
+  .zoom-label {
+    font-size: 13px;
+    color: #333;
+  }
+
+  .zoom-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .zoom-slider {
+    flex: 1;
+    height: 4px;
+    accent-color: #667eea;
+    cursor: pointer;
+  }
+
+  .zoom-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    min-width: 40px;
+    text-align: right;
   }
 </style>
