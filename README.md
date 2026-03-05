@@ -1,111 +1,119 @@
 # Gemini Sidekick
 
-ChromeのサイドパネルでGeminiを使えるChrome拡張機能。
+A Chrome extension that embeds Google Gemini in the browser's side panel. Chat with Gemini while browsing — no tab switching needed.
 
-## 機能
+## Why?
 
-### サイドパネルでGemini表示
-- Chromeのサイドパネルに Gemini（gemini.google.com）をiframeで埋め込み表示
-- ブラウジングしながらGeminiにいつでもアクセス可能
-- ショートカットキー `Alt+G` でサイドパネルを開閉
+| Problem | Gemini Sidekick Solution |
+|---------|------------------------|
+| Switching tabs to use Gemini | Always available in the side panel (`Alt+G`) |
+| Text too small/large in narrow panel | Zoom level adjustment (50%–150%) |
+| Copy-pasting text into Gemini is tedious | Auto-copies selected text to clipboard when panel is open |
+| Gemini sidebar doesn't scroll in narrow widths | CSS injection fixes scroll in side panel mode |
 
-### デフォルト画面の選択
-サイドパネルを開いたときに表示する画面を選択可能:
-- **新しいチャット画面** - 通常のGemini画面（デフォルト）
-- **Gems一覧** - 作成済みのGem一覧
-- **カスタムURL** - 特定のGemを直接指定（`gemini.google.com` ドメインのみ）
+## Install
 
-### テキスト自動コピー
-- サイドパネルが開いている間、Webページ上のテキストを選択すると自動でクリップボードにコピー
-- コピー完了の通知バーを表示
-- パスワードフィールドからの選択は自動的に除外（セキュリティ配慮）
-- 設定でON/OFF切り替え可能
+1. Clone or download this repository
+2. Open `chrome://extensions/`
+3. Enable **Developer mode**
+4. Click **Load unpacked** → select `chrome-ext-gemini-sidekick/chrome-mv3/`
 
-### ズームレベル調整
-- サイドパネル内のGemini表示サイズを 50%〜150% の範囲で変更可能（10%刻み）
-- 設定画面のスライダーで直感的に操作
-- 狭いサイドパネルでも見やすいサイズに調整できる
+Or install from the pre-built zip in `chrome-ext-gemini-sidekick/`.
 
-### Geminiスクロール修正
-- サイドパネルの狭い幅でGeminiがモバイル判定され、左サイドバー（会話履歴・Gem一覧）のスクロールが無効化される問題を修正
-- CSS注入によるスクロール復旧 + 細めのスクロールバー表示
+## Features
 
-### 多言語対応
-- 日本語 / English 対応
-- 自動検出（ブラウザの言語設定に追従）または手動選択
+### Side Panel Embedding
 
-## 技術構成
+Opens Gemini (`gemini.google.com`) in Chrome's side panel via iframe. Press `Alt+G` (configurable) to toggle.
 
-| 項目 | 内容 |
-|------|------|
-| フレームワーク | [WXT](https://wxt.dev/) (Vite ベース) |
-| UI | [Svelte 4](https://svelte.dev/) |
-| マニフェスト | Chrome Manifest V3 |
-| 言語 | TypeScript |
+### Default View
 
-### エントリポイント構成
+Choose what to show when opening the side panel:
+
+| Option | Description |
+|--------|------------|
+| **New Chat** | Standard Gemini screen (default) |
+| **Gems List** | Browse your created Gems |
+| **Custom URL** | Open a specific Gem directly (`gemini.google.com` domain only) |
+
+### Zoom Level
+
+Adjust the Gemini display size in the side panel from 50% to 150% (10% increments). Useful for fitting content in narrow panel widths.
+
+### Auto-Copy
+
+When the side panel is open, selecting text on any page automatically copies it to your clipboard. A notification bar confirms the copy. Password fields are excluded for security.
+
+### Scroll Fix
+
+Fixes Gemini's left sidebar (chat history, Gems list) scroll being disabled when Chrome detects narrow viewport widths in the side panel.
+
+### i18n
+
+Supports English and Japanese. Auto-detects from browser language or can be set manually.
+
+## Settings
+
+Accessible from the gear icon in the side panel or via `chrome://extensions` → Gemini Sidekick → Options.
+
+| Setting | Default | Description |
+|---------|---------|------------|
+| Default View | New Chat | Screen shown when panel opens |
+| Zoom Level | 100% | Display scale (50%–150%) |
+| Auto-Copy | ON | Copy selected text while panel is open |
+| Language | Auto | UI language (auto / ja / en) |
+| Shortcut | `Alt+G` | Open side panel (configurable in Chrome) |
+
+## Architecture
 
 ```
 entrypoints/
-  background.ts          # Service Worker: サイドパネル開閉管理（Port接続監視）
-  content.ts             # Content Script: テキスト選択→自動コピー（全ページ）
-  gemini-scroll.content.ts  # Content Script: Gemini専用スクロール修正CSS
-  sidepanel/             # サイドパネルUI（Svelte）
-    App.svelte           #   メイン画面 + インライン設定画面
-    index.html
-    main.ts
-  options/               # オプションページUI（Svelte）
-    App.svelte           #   フル設定画面
-    index.html
-    main.ts
-  lib/
-    settings.ts          # 設定管理（chrome.storage.sync）
-    i18n.ts              # i18nユーティリティ（Svelte store ベース）
-    locales/             # 翻訳ファイル
-      en.ts              #   English（ベース言語・型定義元）
-      ja.ts              #   日本語
-      index.ts
+├── background.ts              # Service Worker: panel open/close tracking via Port
+├── content.ts                 # Content Script: auto-copy on text selection (all pages)
+├── gemini-scroll.content.ts   # Content Script: scroll fix CSS (gemini.google.com only)
+├── sidepanel/                 # Side panel UI (Svelte)
+│   └── App.svelte             #   Main view + inline settings
+├── options/                   # Options page UI (Svelte)
+│   └── App.svelte             #   Full settings page
+└── lib/
+    ├── settings.ts            # Settings management (chrome.storage.sync)
+    ├── i18n.ts                # i18n utility (Svelte store-based)
+    └── locales/               # en.ts (source of truth) + ja.ts
 ```
 
-### 使用しているChrome API
+| Tech | Choice |
+|------|--------|
+| Framework | [WXT](https://wxt.dev/) (Vite-based) |
+| UI | Svelte 4 |
+| Manifest | Chrome MV3 |
+| Language | TypeScript |
 
-| API | 用途 |
-|-----|------|
-| `sidePanel` | サイドパネルの開閉制御 |
-| `storage.sync` | 設定の永続化（デバイス間同期） |
-| `storage.session` | サイドパネル開閉状態の共有 |
-| `declarativeNetRequest` | Geminiのiframe表示に必要なヘッダー除去 |
-| `clipboardWrite` | テキスト自動コピー |
-| `runtime.connect` / `Port` | サイドパネル生存監視 |
+### Chrome APIs Used
 
-### declarativeNetRequest について
+| API | Purpose |
+|-----|---------|
+| `sidePanel` | Panel open/close control |
+| `storage.sync` | Persistent settings (synced across devices) |
+| `storage.session` | Panel open state sharing with content scripts |
+| `declarativeNetRequest` | Remove `X-Frame-Options` / `CSP` headers for Gemini iframe |
+| `clipboardWrite` | Auto-copy feature |
+| `runtime.connect` / `Port` | Panel lifecycle detection |
 
-Geminiをiframe内で表示するため、`X-Frame-Options` と `Content-Security-Policy` ヘッダーを `gemini.google.com` ドメインのサブフレームリクエストに対してのみ除去しています（`rules.json`）。
+### Security Note
 
-## 開発
+To embed Gemini in an iframe, `X-Frame-Options` and `Content-Security-Policy` response headers are removed for `gemini.google.com` sub-frame requests only (`rules.json`). This is scoped to the minimum necessary for the extension to function.
+
+## Development
 
 ```bash
-# 依存インストール
-npm install
-
-# 開発モード（ホットリロード）
-npm run dev
-
-# ビルド
-npm run build
-
-# zip作成（配布用）
-npm run zip
+npm install          # Install dependencies
+npm run dev          # Dev mode (hot reload)
+npm run build        # Production build
+npm run zip          # Build + create distribution zip
 ```
 
-ビルド出力先: `../../chrome-ext-gemini-sidekick/chrome-mv3/`
+Build output: `../../chrome-ext-gemini-sidekick/chrome-mv3/`
 
-## インストール
-
-1. `chrome://extensions/` を開く
-2. 「デベロッパーモード」をON
-3. 「パッケージ化されていない拡張機能を読み込む」から `chrome-ext-gemini-sidekick/chrome-mv3/` を選択
-
-## ライセンス
+## License
 
 MIT
